@@ -1,0 +1,8 @@
+02/23/25
+
+Due to some unfortunate illnesses on our end, we were delayed in our starting of this project. However, after reading through the gRPC
+python tutotiral, we feel pretty good since the proto file seems to take care of all the low-level stuff for us. In fact, most of our code will remain
+the same for the client UI, it's just that our server and client will be on a bidirectional stream in communicating.
+
+It might be better to have each action be its own function. First, let's set up a "test_server" and "test_client" to make sure everything
+will work properly at scale.
