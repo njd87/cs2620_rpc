@@ -1,0 +1,72 @@
+syntax = "proto3";
+package chat;
+
+// Define the different types of actions.
+enum Action {
+  UNKNOWN = 0;
+  LOGIN = 1;
+  REGISTER = 2;
+  CHECK_USERNAME = 3;
+  LOAD_CHAT = 4;
+  SEND_MESSAGE = 5;
+  PING = 6;
+  VIEW_UNDELIVERED = 7;
+  DELETE_MESSAGE = 8;
+  DELETE_ACCOUNT = 9;
+  PING_USER = 10;
+
+}
+
+message ChatRequest {
+  // FOR CLIENT USE
+
+
+  // Define the action from enum
+  Action action = 1;
+
+  // username + passhash used for creating an deleting accounts
+  string username = 2;
+  string passhash = 3;
+
+  // used for load chat
+  string user2 = 4;
+
+  // send for sending messages
+  string sender = 5;
+  string recipient = 6;
+  string message = 7;
+  
+  // pings and undelivered messages
+  string sent_message = 8;
+  int32 n_messages = 9;
+  int32 message_id = 10;
+}
+
+message ChatResponse {
+  Action action = 1;
+
+  // for client use (success vs failure)
+  bool result = 2;
+
+  // get list of all users
+  repeated string users = 3;
+
+  // number of undelivered messages
+  int32 n_undelivered = 4;
+
+  // list of messages
+  repeated string messages = 5;
+
+  // used for sending messages and pings
+  int32 message_id = 6;
+  string sender = 7;
+  string sent_message = 8;
+
+  // used for user added or deleted
+  string ping_user = 9;
+}
+
+service ChatService {
+  // A single bidirectional stream for all chat operations.
+  rpc Chat(stream ChatRequest) returns (stream ChatResponse);
+}

@@ -12,3 +12,7 @@ to notify specific users...Working now! Had to use the "listen" function.
 
 After some more research, it seems the best way to construct our reworked application is to use "enums" for actions then declaring the whole
 service as a bidrectional rpc.
+
+4:34pm: The proto file is now completely set up the way it was in comm_server and comm_client from before. The files have also been generated.
+
+The next step should be to get a client running with a server.

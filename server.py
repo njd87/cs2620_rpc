@@ -1,217 +1,300 @@
-import sys
-import socket
-import selectors
-import logging
+import hashlib
 import os
+import sqlite3
+import grpc
+from concurrent import futures
 import time
-from comm_server import Bolt
+import queue
+import threading
+import json
+import logging
+
+import chat_pb2
+import chat_pb2_grpc
 import json
 
-# log to a file
-log_file = "logs/server.log"
-db_file = "data/messenger.db"
+log_path = 'logs/server.log'
+db_path = 'data/messenger.db'
 
-# if the file does not exist in the current directory, create it
-if not os.path.exists(log_file):
-    with open(log_file, "w") as f:
+# setup logging
+logging.basicConfig(level=logging.INFO)
+if not os.path.exists('logs'):
+    with open(log_path, 'w') as f:
         pass
 
-
 logging.basicConfig(
-    filename=log_file,
+    filename=log_path,
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-# load config/config.json
-if not os.path.exists("config/config.json"):
-    logging.error(
-        "Config file does not exist, exiting at %s", time.strftime("%Y-%m-%d %H:%M:%S")
-    )
-    sys.exit(1)
-
-# load the config file
-with open("config/config.json", "r") as f:
+# import config from config/config.json
+if not os.path.exists('config/config.json'):
+    print("Error: config.json not found")
+    exit(1)
+with open('config/config.json') as f:
     config = json.load(f)
 
-protocol = 'json'
+try:
+    host = config['server_config']['host']
+    port = config['server_config']['port']
+except KeyError as e:
+    print(f"Error: {e} not found in config.json")
+    exit(1)
 
-def setup():
-    """
-    Set up the server.
-    """
-    global sel, log_file, protocol
+# map of clients to queues for sending responses
+clients = {}
 
-    # check if the log file exists
-    if not os.path.exists(log_file):
-        logging.error(
-            "Log file does not exist, exiting at %s", time.strftime("%Y-%m-%d %H:%M:%S")
-        )
-        sys.exit(1)
+class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
+    '''
+    ChatServiceServicer class for ChatServiceServicer
 
-    # check if the database file exists
-    if not os.path.exists(db_file):
-        logging.error(
-            "Database file does not exist, exiting at %s",
-            time.strftime("%Y-%m-%d %H:%M:%S"),
-        )
-        sys.exit(1)
+    This class handles the main chat functionality of the server, sending responses via queues.
+    '''
+    def Chat(self, request_iterator, context):
+        '''
+        Chat function for ChatServiceServicer, unique to each client.
 
-    # create basic selector
-    sel = selectors.DefaultSelector()
+        Parameters:
+        ----------
+        request_iterator : iterator
+            iterator of requests from client
+        context : context
+            All tutorials have this, but it's not used here. Kept for compatibility.
+        '''
+        username = None
+        # queue for sending responses to client
+        client_queue = queue.Queue()
 
-    # check arguments for host and port
-    try:
-        server_config = config["server_config"]
-        host = server_config["host"]
-        port = server_config["port"]
-        protocol = server_config["protocol"]
-    except Exception as e:
-        logging.error(
-            "Error reading host and port from config file, exiting at %s",
-            time.strftime("%Y-%m-%d %H:%M:%S"),
-        )
-        sys.exit(1)
+        # handle incoming requests
+        def handle_requests():
+            nonlocal username
+            try:
+                for req in request_iterator:
+                    if req.action == chat_pb2.CHECK_USERNAME:
+                        # check if username is already in use
+                        sqlcon = sqlite3.connect(db_path)
+                        sqlcur = sqlcon.cursor()
 
-    # set up socket
-    lsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    lsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    lsock.bind((host, port))
-    lsock.listen()
-    logging.info(
-        "Listening on %s:%d at %s", host, port, time.strftime("%Y-%m-%d %H:%M:%S")
-    )
-    lsock.setblocking(False)
-    sel.register(lsock, selectors.EVENT_READ, data=None)
+                        sqlcur.execute("SELECT * FROM users WHERE username=?", (req.username,))
 
+                        # if username is already in use, send response with success=False
+                        # otherwise, send response with success=True
+                        if sqlcur.fetchone():
+                            client_queue.put(chat_pb2.ChatResponse(action=chat_pb2.CHECK_USERNAME, result=False))
+                        else:
+                            client_queue.put(chat_pb2.ChatResponse(action=chat_pb2.CHECK_USERNAME, result=True))
+                        sqlcon.close()
 
-def accept_wrapper(sock: socket.socket) -> None:
-    """
-    Accept a connection and register it with the selector.
+                    elif req.action == chat_pb2.LOGIN:
+                        sqlcon = sqlite3.connect(db_path)
+                        sqlcur = sqlcon.cursor()
 
-    Parameters
-    ----------
-    sock : socket.socket
-        The socket to accept a connection on.
-    """
-    conn, addr = sock.accept()
-    logging.info(
-        "Accepted connection from %s at %s", addr, time.strftime("%Y-%m-%d %H:%M:%S")
-    )
-    conn.setblocking(False)
+                        sqlcur.execute("SELECT * FROM users WHERE username=? AND password=?", (req.username, req.password))
 
-    # register the connection with the selector
-    data = Bolt(sel=sel, sock=conn, addr=addr, protocol_type=protocol)
-    sel.register(conn, selectors.EVENT_READ, data=data)
+                        # if username and password match, send response with success=True
+                        # otherwise, send response with success=False
+                        if sqlcur.fetchone():
+                            client_queue.put(chat_pb2.ChatResponse(action=chat_pb2.LOGIN, result=True))
+                        else:
+                            client_queue.put(chat_pb2.ChatResponse(action=chat_pb2.LOGIN, result=False))
+                        sqlcon.close()
 
+                    elif req.action == chat_pb2.REGISTER:
+                        sqlcon = sqlite3.connect(db_path)
+                        sqlcur = sqlcon.cursor()
 
-def main_loop() -> None:
-    """
-    Main loop for the server.
-    """
-    try:
-        connected_users = {}
-        while True:
-            # listen for events
-            events = sel.select(timeout=None)
-            for key, mask in events:
-                if key.data is None:
-                    accept_wrapper(key.fileobj)
-                else:
-                    try:
-                        # back to server contains information a bolt might want to communicate back to the main server
-                        back_to_server = key.data.process_events(mask)
+                        # check to make sure username is not already in use
+                        sqlcur.execute("SELECT * FROM users WHERE username=?", (req.username,))
+                        if sqlcur.fetchone():
+                            client_queue.put(chat_pb2.ChatResponse(action=chat_pb2.REGISTER, result=False))
+                        else:
+                            # add new user to database
+                            sqlcur.execute("INSERT INTO users (username, password) VALUES (?, ?)", (req.username, req.password))
+                            sqlcon.commit()
+                            client_queue.put(chat_pb2.ChatResponse(action=chat_pb2.REGISTER, result=True))
 
-                        # if we have something to send back to the server, we need to update the connected users
-                        if back_to_server:
-                            if "new_user" in back_to_server:
-                                logging.info(
-                                    "New user %s at %s",
-                                    back_to_server["new_user"],
-                                    time.strftime("%Y-%m-%d %H:%M:%S"),
-                                )
-                                if "registering" in back_to_server:
-                                    # ping all users to let them know a new user has joined
-                                    for user in connected_users:
-                                        connected_users[user]["bolt"].request = {
-                                            "action": "ping_user",
-                                            "ping_user": back_to_server["new_user"]
-                                        }
-                                connected_users[back_to_server["new_user"]] = {
-                                    "socket" : key.fileobj,
-                                    "bolt" : key.data
-                                }
+                        sqlcon.close()
 
-                                logging.info("Connected users: %s", connected_users)
-                            elif "new_message" in back_to_server:
-                                # ping connected recipient to let them know there is a new message
-                                logging.info(
-                                    "Message from %s to %s at %s",
-                                    back_to_server["new_message"]["sender"],
-                                    back_to_server["new_message"]["recipient"],
-                                    time.strftime("%Y-%m-%d %H:%M:%S"),
-                                )
-                                # let recipient know they have a message if they are connected
-                                if back_to_server["new_message"]["recipient"] in connected_users:
-                                    connected_users[back_to_server["new_message"]["recipient"]]["bolt"].request = {
-                                        "action": "ping",
-                                        "sender": back_to_server["new_message"]["sender"],
-                                        "sent_message": back_to_server["new_message"]["sent_message"],
-                                        "message_id": back_to_server["new_message"]["message_id"]
-                                    }
-                            elif "delete_user" in back_to_server:
-                                # delete user from connected users
-                                logging.info(
-                                    "Deleting user %s at %s",
-                                    back_to_server["delete_user"],
-                                    time.strftime("%Y-%m-%d %H:%M:%S"),
-                                )
-                                del connected_users[back_to_server["delete_user"]]
-                                for user in connected_users: #KG: could be really slow if there are a lot of users?
-                                    connected_users[user]["bolt"].request = {
-                                        "action": "ping_user",
-                                        "ping_user": back_to_server["delete_user"]
-                                    }
-                                logging.info("Connected users: %s", connected_users)
-                    except Exception as e:
-                        # If the connection is closed by the peer, log and clean up without breaking the loop.
-                        logging.error(
-                            "Connection closed by peer: %s at %s",
-                            key.fileobj,
-                            time.strftime("%Y-%m-%d %H:%M:%S")
+                        # add user to clients
+                        username = req.username
+                        clients[username] = client_queue
+
+                        # send ping_user to all clients
+                        for user_q in clients.values():
+                            user_q.put(chat_pb2.ChatResponse(action=chat_pb2.PING_USER, username=username))
+
+                        # ping all online users
+                    elif req.action == chat_pb2.LOAD_CHAT:
+                        sqlcon = sqlite3.connect(db_path)
+                        sqlcur = sqlcon.cursor()
+
+                        username = req.username
+                        user2 = req.user2
+                        try:
+                            sqlcur.execute(
+                                "SELECT sender, recipient, message, message_id FROM messages WHERE (sender=? AND recipient=?) OR (sender=? AND recipient=?) ORDER BY time",
+                                (username, user2, user2, username),
+                            )
+                            result = sqlcur.fetchall()
+                        except Exception as e:
+                            logging.error(f"Error in Load Chat: {e}")
+                            result = []
+                        
+                        client_queue.put(chat_pb2.ChatResponse(action=chat_pb2.LOAD_CHAT, messages=result))
+
+                    elif req.action == chat_pb2.SEND_MESSAGE:
+                        sender = req.sender
+                        recipient = req.recipient
+                        message = req.message
+                        sqlcon = sqlite3.connect(db_path)
+                        sqlcur = sqlcon.cursor()
+
+                        try:
+                            sqlcur.execute(
+                                "INSERT INTO messages (sender, recipient, message) VALUES (?, ?, ?)",
+                                (sender, recipient, message),
+                            )
+                            sqlcon.commit()
+
+                            # get the message_id
+                            sqlcur.execute(
+                                "SELECT message_id FROM messages WHERE sender=? AND recipient=? AND message=? ORDER BY time DESC LIMIT 1",
+                                (sender, recipient, message),
+                            )
+                            message_id = sqlcur.fetchone()[0]
+
+                            # send message to recipient
+                            client_queue.put(chat_pb2.ChatResponse(action=chat_pb2.SEND_MESSAGE, message_id=message_id))
+
+                            # ping recipient if online
+                            if recipient in clients:
+                                clients[recipient].put(chat_pb2.ChatResponse(action=chat_pb2.PING, sender=sender, sent_message=message, message_id=message_id))
+
+                        except:
+                            logging.error("Error sending message")
+                            message_id = None
+
+                        sqlcon.close()
+                    elif req.action == chat_pb2.PING:
+                        action = req.action
+                        sender = req.sender
+                        sent_message = req.sent_message
+                        message_id = req.message_id
+
+                        client_queue.put(chat_pb2.ChatResponse(action=action, sender=sender, sent_message=sent_message, message_id=message_id))
+
+                        sqlcon = sqlite3.connect(db_path)
+                        sqlcur = sqlcon.cursor()
+
+                        logging.info(f"Updating message {message_id} to delivered.")
+
+                        sqlcur.execute(
+                            "UPDATE messages SET delivered=1 WHERE message_id=?", (message_id,)
                         )
-                        logging.error("Exception: %s", e)
-                        try:
-                            sel.unregister(key.fileobj)
+                        sqlcon.commit()
 
-                            # remove user from connected users
-                            for user in connected_users:
-                                if connected_users[user] == key.fileobj:
-                                    logging.info(
-                                        "Removing user %s at %s",
-                                        user,
-                                        time.strftime("%Y-%m-%d %H:%M:%S"),
-                                    )
-                                    del connected_users[user]
+                        sqlcon.close()
+                    elif req.action == chat_pb2.VIEW_UNDELIVERED:
+                        sqlcon = sqlite3.connect(db_path)
+                        sqlcur = sqlcon.cursor()
 
-                            logging.info("Connected users: %s", connected_users)
-                        except Exception:
-                            pass
-                        try:
-                            key.fileobj.close()
-                        except Exception:
-                            pass
-            # Continue looping for new connections
+                        username = req.username
+                        n_messages = req.n_messages
+
+                        sqlcur.execute(
+                            "SELECT sender, recipient, message, message_id FROM messages WHERE recipient=? AND delivered=0 ORDER BY time DESC LIMIT ?",
+                            (username, n_messages),
+                        )
+                        result = sqlcur.fetchall()
+                        queue.put(chat_pb2.ChatResponse(action=chat_pb2.VIEW_UNDELIVERED, messages=result))
+
+                        sqlcur.execute(
+                            "UPDATE messages SET delivered=1 WHERE recipient=?", (username,)
+                        )
+
+                        sqlcon.commit()
+                        sqlcon.close()
+                    elif req.action == chat_pb2.DELETE_MESSAGE:
+                        sqlcon = sqlite3.connect(db_path)
+                        sqlcur = sqlcon.cursor()
+
+                        message_id = req.message_id
+                        sqlcur.execute("DELETE FROM messages WHERE message_id=?", (message_id,))
+                        sqlcon.commit()
+
+                        sqlcon.close()
+                        queue.put(chat_pb2.ChatResponse(action=chat_pb2.DELETE_MESSAGE, message_id=message_id))
+                    elif req.action == chat_pb2.DELETE_ACCOUNT:
+                        sqlcon = sqlite3.connect(db_path)
+                        sqlcur = sqlcon.cursor()
+
+                        username = req.username
+                        passhash = req.password
+
+
+                        passhash = hashlib.sha256(passhash.encode()).hexdigest()
+                        sqlcur.execute("SELECT passhash FROM users WHERE username=?", (username,))
+
+                        result = sqlcur.fetchone()
+                        if result:
+                            # username exists and passhash matches
+                            if result[0] == passhash:
+                                sqlcur.execute("DELETE FROM users WHERE username=?", (username,))
+                                sqlcur.execute("DELETE FROM messages WHERE sender=? OR recipient=?", (username, username))
+                                sqlcon.commit()
+
+                                client_queue.put(chat_pb2.ChatResponse(action=chat_pb2.DELETE_ACCOUNT, result=True))
+                                # tell server to ping users to update their chat, remove from connected users
+                            # username exists but passhash is wrong
+                            else:
+                                client_queue.put(chat_pb2.ChatResponse(action=chat_pb2.DELETE_ACCOUNT, result=False))
+                        else:
+                            # username doesn't exist
+                            client_queue.put(chat_pb2.ChatResponse(action=chat_pb2.DELETE_ACCOUNT, result=False))
+
+                        sqlcon.close()
+                    elif req.action == chat_pb2.PING_USER:
+                        # ping that a user has been added or deleted
+                        action = req.action
+                        ping_user = req.ping_user
+                        client_queue.put(chat_pb2.ChatResponse(action=action, ping_user=ping_user))
+                    else:
+                        logging.error(f"Invalid action: {req.action}")
+            except Exception as e:
+                print("Error handling requests:", e)
+            finally:
+                if username in clients:
+                    del clients[username]
+                    print(f"{username} disconnected.")
+
+        # Run request handling in a separate thread.
+        threading.Thread(target=handle_requests, daemon=True).start()
+
+        # Continuously yield responses from the client's queue.
+        while True:
+            try:
+                response = client_queue.get()
+                yield response
+            except Exception as e:
+                break
+
+
+def serve():
+    '''
+    Main loop for server. Runs server on separate thread.
+    '''
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    chat_pb2_grpc.add_ChatServiceServicer_to_server(ChatServiceServicer(), server)
+    server.add_insecure_port(f"{host}:{port}")
+    server.start()
+    print(f"Server started on {host}:{port}")
+    try:
+        while True:
+            time.sleep(86400)
     except KeyboardInterrupt:
-        logging.error(
-            "KeyboardInterrupt, exiting at %s", time.strftime("%Y-%m-%d %H:%M:%S")
-        )
-    finally:
-        sel.close()
-        sys.exit(0)
+        server.stop(0)
 
-
-if __name__ == "__main__":
-    setup()
-    main_loop()
+if __name__ == '__main__':
+    serve()
