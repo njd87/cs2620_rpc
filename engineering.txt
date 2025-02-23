@@ -6,3 +6,9 @@ the same for the client UI, it's just that our server and client will be on a bi
 
 It might be better to have each action be its own function. First, let's set up a "test_server" and "test_client" to make sure everything
 will work properly at scale.
+
+Ok, was able to make it so the server can notify all connected clients. Now, to mimic our server use from before, we need to be able
+to notify specific users...Working now! Had to use the "listen" function.
+
+After some more research, it seems the best way to construct our reworked application is to use "enums" for actions then declaring the whole
+service as a bidrectional rpc.
