@@ -1,0 +1,182 @@
+syntax = "proto3";
+
+package chat;
+
+// Enum for all supported actions.
+enum Action {
+  UNKNOWN = 0;         // Default value.
+  LOGIN = 1;
+  REGISTER = 2;
+  CHECK_USERNAME = 3;
+  LOAD_CHAT = 4;
+  SEND_MESSAGE = 5;
+  PING = 6;
+  VIEW_UNDELIVERED = 7;
+  DELETE_MESSAGE = 8;
+  DELETE_ACCOUNT = 9;
+  PING_USER = 10;
+}
+
+// ----------------------
+// Request messages
+// ----------------------
+message Request {
+  Action action = 1;
+
+  // Oneof payload: only one of these messages will be set.
+  oneof payload {
+    LoginRequest login = 2;
+    RegisterRequest register = 3;
+    CheckUsernameRequest check_username = 4;
+    LoadChatRequest load_chat = 5;
+    SendMessageRequest send_message = 6;
+    PingRequest ping = 7;
+    ViewUndeliveredRequest view_undelivered = 8;
+    DeleteMessageRequest delete_message = 9;
+    DeleteAccountRequest delete_account = 10;
+    PingUserRequest ping_user = 11;
+  }
+}
+
+message LoginRequest {
+  string username = 1;
+  string passhash = 2;
+}
+
+message RegisterRequest {
+  string username = 1;
+  string passhash = 2;
+}
+
+message CheckUsernameRequest {
+  string username = 1;
+}
+
+message LoadChatRequest {
+  string username = 1;
+  string user2 = 2;
+}
+
+message SendMessageRequest {
+  string sender = 1;
+  string recipient = 2;
+  string message = 3;
+}
+
+message PingRequest {
+  string sender = 1;
+  string sent_message = 2;
+}
+
+message ViewUndeliveredRequest {
+  string username = 1;
+  int32 n_messages = 2;
+}
+
+message DeleteMessageRequest {
+  int32 message_id = 1;
+}
+
+message DeleteAccountRequest {
+  string username = 1;
+  string passhash = 2;
+}
+
+message PingUserRequest {
+  // Even if in your Python code a single value is wrapped in a list,
+  // here we define it as a single string; you can change this to a
+  // repeated field if you expect multiple values.
+  string ping_user = 1;
+}
+
+// ----------------------
+// Response messages
+// ----------------------
+message Response {
+  Action action = 1;
+
+  // Oneof payload: only one response type will be set.
+  oneof payload {
+    LoginResponse login = 2;
+    RegisterResponse register = 3;
+    CheckUsernameResponse check_username = 4;
+    LoadChatResponse load_chat = 5;
+    SendMessageResponse send_message = 6;
+    PingResponse ping = 7;
+    ViewUndeliveredResponse view_undelivered = 8;
+    DeleteMessageResponse delete_message = 9;
+    DeleteAccountResponse delete_account = 10;
+    PingUserResponse ping_user = 11;
+    ErrorResponse error = 12;
+  }
+}
+
+message LoginResponse {
+  bool result = 1;
+  // List of other usernames (for example, friends/available users).
+  repeated string users = 2;
+  // For login only: the number of undelivered messages.
+  int32 n_undelivered = 3;
+}
+
+message RegisterResponse {
+  bool result = 1;
+  repeated string users = 2;
+}
+
+message CheckUsernameResponse {
+  bool result = 1;
+}
+
+message ChatMessage {
+  string sender = 1;
+  string recipient = 2;
+  string message = 3;
+  int32 message_id = 4;
+}
+
+message LoadChatResponse {
+  // A list of messages exchanged between two users.
+  repeated ChatMessage messages = 1;
+}
+
+message SendMessageResponse {
+  // The unique identifier of the newly stored message.
+  int32 message_id = 1;
+}
+
+message PingResponse {
+  string sender = 1;
+  string sent_message = 2;
+  // This field could represent a message identifier.
+  int32 message_id = 3;
+}
+
+message ViewUndeliveredResponse {
+  repeated ChatMessage messages = 1;
+}
+
+message DeleteMessageResponse {
+  bool result = 1;
+}
+
+message DeleteAccountResponse {
+  bool result = 1;
+}
+
+message PingUserResponse {
+  // A list of usernames to be pinged (e.g. for notifying user list changes).
+  repeated string ping_user = 1;
+}
+
+message ErrorResponse {
+  string error_message = 1;
+}
+
+// ----------------------
+// Service Definition
+// ----------------------
+service ChatService {
+  // A single RPC to handle various types of chat requests.
+  rpc HandleRequest(Request) returns (Response);
+}
