@@ -100,7 +100,9 @@ class ClientUI:
         self.root.mainloop()
 
     def handle_responses(self):
-        """Continuously receive responses from the server and display them in the text widget."""
+        '''
+        Constantly check for responses from the server and process them.
+        '''
         try:
             responses = self.stub.Chat(request_generator())
             for resp in responses:
@@ -182,11 +184,14 @@ class ClientUI:
                         self.incoming_pings.append((resp.sender, resp.sent_message))
                         self.rerender_pings()
                 elif action == chat_pb2.DELETE_MESSAGE:
+                    # find message in loaded messages and delete it
                     index = self.chat_text.curselection()[0] - 1
                     del self.loaded_messages[index]
                     self.chat_entry.delete(0, tk.END)
                     self.rerender_messages()
                 elif action == chat_pb2.DELETE_ACCOUNT:
+                    # if successful, reset login vars and go to deleted
+                    # if not, go to settings with failed
                     if resp.result:
                         self.reset_login_vars()
                         self.destroy_settings()
@@ -195,6 +200,11 @@ class ClientUI:
                         self.destroy_settings()
                         self.setup_settings(failed=True)
                 elif action == chat_pb2.PING_USER:
+                    # if the user is connected, remove them from the users list
+                    # if the user is the connected user, reset the chat
+                    # if the user is the connected user, remove the pings
+
+                    # if it is a new user, add them to the users list
                     pinging_user = resp.ping_user
                     if pinging_user in self.users:
                         self.users = [user for user in self.users if user != pinging_user]
