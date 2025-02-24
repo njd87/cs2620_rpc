@@ -153,3 +153,20 @@
 >
 2025-02-24 18:34:56 - INFO - Deleting Account: nick2
 2025-02-24 18:37:55 - INFO - Deleting Account: nick2
+2025-02-24 18:51:10 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {created_time:"2025-02-24T18:51:10.722874-05:00", grpc_status:14, grpc_message:"Cancelling all calls"}"
+>
+2025-02-24 18:52:01 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {grpc_message:"Cancelling all calls", grpc_status:14, created_time:"2025-02-24T18:52:01.672762-05:00"}"
+>
+2025-02-24 18:52:29 - INFO - Size of response: 80
+2025-02-24 18:52:31 - INFO - Size of response: 80
+2025-02-24 18:54:01 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {created_time:"2025-02-24T18:54:01.242626-05:00", grpc_status:14, grpc_message:"Cancelling all calls"}"
+>

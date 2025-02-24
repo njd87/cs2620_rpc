@@ -30,11 +30,13 @@ if not os.path.exists(log_file):
 # A thread-safe queue for outgoing ChatRequests.
 outgoing_queue = queue.Queue()
 
+
 def request_generator():
     """Yield ChatRequests from the outgoing_queue."""
     while True:
         req = outgoing_queue.get()
         yield req
+
 
 class ClientUI:
     """
@@ -66,7 +68,7 @@ class ClientUI:
         self.root.title("Messenger")
         self.root.geometry("800x600")
 
-        self.channel = grpc.insecure_channel(f'{host}:{port}')
+        self.channel = grpc.insecure_channel(f"{host}:{port}")
         self.stub = chat_pb2_grpc.ChatServiceStub(self.channel)
 
         self.credentials = None
@@ -100,12 +102,13 @@ class ClientUI:
         self.root.mainloop()
 
     def handle_responses(self):
-        '''
+        """
         Constantly check for responses from the server and process them.
-        '''
+        """
         try:
             responses = self.stub.Chat(request_generator())
             for resp in responses:
+                logging.info(f'Size of response: {sys.getsizeof(resp)}')
                 action = resp.action
                 if action == chat_pb2.CHECK_USERNAME:
                     # destroy current screen
@@ -144,18 +147,22 @@ class ClientUI:
                     messages = []
 
                     for cm in resp.messages:
-                        messages.append((cm.sender, cm.recipient, cm.message, cm.message_id))
+                        messages.append(
+                            (cm.sender, cm.recipient, cm.message, cm.message_id)
+                        )
 
                     self.loaded_messages = messages
                     self.rerender_messages()
                 elif action == chat_pb2.SEND_MESSAGE:
                     # a message was sent currently to the user
-                    self.loaded_messages.append((
-                        self.credentials,
-                        self.connected_to,
-                        self.chat_entry.get(),
-                        resp.message_id,
-                    ))
+                    self.loaded_messages.append(
+                        (
+                            self.credentials,
+                            self.connected_to,
+                            self.chat_entry.get(),
+                            resp.message_id,
+                        )
+                    )
                     self.chat_entry.delete(0, tk.END)
                     self.rerender_messages()
                 elif action == chat_pb2.VIEW_UNDELIVERED:
@@ -163,7 +170,9 @@ class ClientUI:
                     messages = []
 
                     for cm in resp.messages:
-                        messages.append((cm.sender, cm.recipient, cm.message, cm.message_id))
+                        messages.append(
+                            (cm.sender, cm.recipient, cm.message, cm.message_id)
+                        )
 
                     self.undelivered_messages = messages
                     self.rerender_undelivered()
@@ -171,14 +180,20 @@ class ClientUI:
                     if self.connected_to == resp.sender:
                         # if the message_id already exists in current loaded messages, remove it
                         if resp.message_id in [m[3] for m in self.loaded_messages]:
-                            self.loaded_messages = [m for m in self.loaded_messages if m[3] != resp.message_id]
+                            self.loaded_messages = [
+                                m
+                                for m in self.loaded_messages
+                                if m[3] != resp.message_id
+                            ]
                         else:
-                            self.loaded_messages.append((
-                                self.connected_to,
-                                self.credentials,
-                                resp.sent_message,
-                                resp.message_id,
-                            ))
+                            self.loaded_messages.append(
+                                (
+                                    self.connected_to,
+                                    self.credentials,
+                                    resp.sent_message,
+                                    resp.message_id,
+                                )
+                            )
                         self.rerender_messages()
                     else:
                         self.incoming_pings.append((resp.sender, resp.sent_message))
@@ -207,13 +222,19 @@ class ClientUI:
                     # if it is a new user, add them to the users list
                     pinging_user = resp.ping_user
                     if pinging_user in self.users:
-                        self.users = [user for user in self.users if user != pinging_user]
+                        self.users = [
+                            user for user in self.users if user != pinging_user
+                        ]
                         self.rerender_users()
                         if self.connected_to == pinging_user:
                             self.connected_to = None
                             self.loaded_messages = []
                             self.rerender_messages()
-                        self.incoming_pings = [ping for ping in self.incoming_pings if ping[0] != pinging_user]
+                        self.incoming_pings = [
+                            ping
+                            for ping in self.incoming_pings
+                            if ping[0] != pinging_user
+                        ]
                         self.rerender_pings()
                     elif pinging_user != self.credentials:
                         self.users.append(pinging_user)
@@ -263,7 +284,6 @@ class ClientUI:
 
         outgoing_queue.put(request)
 
-
     def send_user_check_request(self, username):
         """
         Send a request to check if the username exists.
@@ -303,7 +323,9 @@ class ClientUI:
         outgoing_queue.put(request)
 
         self.connected_to = username
-        self.incoming_pings = [ping for ping in self.incoming_pings if ping[0] != username] # KG: could cause slowdown
+        self.incoming_pings = [
+            ping for ping in self.incoming_pings if ping[0] != username
+        ]  # KG: could cause slowdown
         self.rerender_pings()
 
     def send_message_request(self, message):
@@ -329,7 +351,7 @@ class ClientUI:
         outgoing_queue.put(request)
 
         # self.check_send_message_request()
-    
+
     def send_undelivered_request(self, n_messages):
         """
         Send a request to view undelivered messages.
@@ -346,11 +368,11 @@ class ClientUI:
         except ValueError:
             self.out_of_range_warning_label.pack()
             return
-        
+
         if n_messages < 0 or n_messages > self.n_undelivered:
             self.out_of_range_warning_label.pack()
             return
-        
+
         # create a request
         request = chat_pb2.ChatRequest(
             action=chat_pb2.VIEW_UNDELIVERED,
@@ -367,7 +389,9 @@ class ClientUI:
         """
         Delete a message from the chat.
         """
-        logging.info(f"Deleting Message: {self.loaded_messages[message_inx]} from {self.credentials} to {self.connected_to}")
+        logging.info(
+            f"Deleting Message: {self.loaded_messages[message_inx]} from {self.credentials} to {self.connected_to}"
+        )
         # check if the message is from the user
         if self.loaded_messages[message_inx][0] == self.credentials:
             message_id = self.loaded_messages[message_inx][3]
@@ -398,8 +422,6 @@ class ClientUI:
 
         outgoing_queue.put(request)
 
-        
-
     """
     Functions starting with "setup_" are used to set up the state of the tkinter window.
 
@@ -424,9 +446,12 @@ class ClientUI:
         self.user_entry_button = tk.Button(
             self.user_entry_frame,
             text="Enter",
-            command=lambda: self.send_user_check_request(self.user_entry.get()) if self.user_entry.get() else None,
+            command=lambda: (
+                self.send_user_check_request(self.user_entry.get())
+                if self.user_entry.get()
+                else None
+            ),
         )
-        
 
         self.user_entry_button.pack()
 
@@ -436,7 +461,7 @@ class ClientUI:
         """
         self.user_entry_frame.destroy()
 
-    def setup_login(self, failed = False):
+    def setup_login(self, failed=False):
         """
         Set up the login screen.
 
@@ -463,9 +488,15 @@ class ClientUI:
         self.login_button = tk.Button(
             self.login_frame,
             text="Login",
-            command=lambda: self.send_logreg_request( # KG: design choice for empty strings?
-                chat_pb2.LOGIN, self.login_entry.get(), self.login_password_entry.get()
-            ) if self.login_entry.get() and self.login_password_entry.get() else None,
+            command=lambda: (
+                self.send_logreg_request(  # KG: design choice for empty strings?
+                    chat_pb2.LOGIN,
+                    self.login_entry.get(),
+                    self.login_password_entry.get(),
+                )
+                if self.login_entry.get() and self.login_password_entry.get()
+                else None
+            ),
         )
         self.login_button.pack()
 
@@ -502,15 +533,21 @@ class ClientUI:
         self.undelivered_frame.pack()
 
         # say a label with "Welcome Back"
-        self.welcome_back_label = tk.Label(self.undelivered_frame, text=f"Welcome back, {self.credentials}!")
+        self.welcome_back_label = tk.Label(
+            self.undelivered_frame, text=f"Welcome back, {self.credentials}!"
+        )
         self.welcome_back_label.pack()
 
-        self.undelivered_label = tk.Label(self.undelivered_frame, text=f"You have {self.n_undelivered} new messages")
+        self.undelivered_label = tk.Label(
+            self.undelivered_frame, text=f"You have {self.n_undelivered} new messages"
+        )
         self.undelivered_label.pack()
 
         if self.n_undelivered:
             # put a number entry for number of messages to view
-            self.undelivered_number_label = tk.Label(self.undelivered_frame, text="Enter number of messages to view:")
+            self.undelivered_number_label = tk.Label(
+                self.undelivered_frame, text="Enter number of messages to view:"
+            )
             self.undelivered_number_label.pack()
 
             # from 0 to n_undelivered
@@ -521,12 +558,23 @@ class ClientUI:
             self.undelivered_number_button = tk.Button(
                 self.undelivered_frame,
                 text="Submit",
-                command=lambda: [self.send_undelivered_request(self.undelivered_number_entry.get()) if self.undelivered_number_entry.get() else None],
+                command=lambda: [
+                    (
+                        self.send_undelivered_request(
+                            self.undelivered_number_entry.get()
+                        )
+                        if self.undelivered_number_entry.get()
+                        else None
+                    )
+                ],
             )
             self.undelivered_number_button.pack()
 
             # out of range warning
-            self.out_of_range_warning_label = tk.Label(self.undelivered_frame, text=f"Please enter a number between 0 and {self.n_undelivered}")
+            self.out_of_range_warning_label = tk.Label(
+                self.undelivered_frame,
+                text=f"Please enter a number between 0 and {self.n_undelivered}",
+            )
 
             # listbox with undelivered messages
             self.undelivered_listbox = tk.Listbox(self.undelivered_frame)
@@ -566,7 +614,9 @@ class ClientUI:
         self.register_frame = tk.Frame(self.root)
         self.register_frame.pack()
 
-        self.register_label = tk.Label(self.register_frame, text=f"Username not found: please register")
+        self.register_label = tk.Label(
+            self.register_frame, text=f"Username not found: please register"
+        )
         self.register_label.pack()
 
         self.register_username_label = tk.Label(
@@ -585,9 +635,15 @@ class ClientUI:
         self.register_button = tk.Button(
             self.register_frame,
             text="Register",
-            command=lambda: self.send_logreg_request( # KG: design choice for empty strings?
-                chat_pb2.REGISTER, self.register_entry.get(), self.register_password_entry.get()
-            ) if self.register_entry.get() and self.register_password_entry.get() else None,
+            command=lambda: (
+                self.send_logreg_request(  # KG: design choice for empty strings?
+                    chat_pb2.REGISTER,
+                    self.register_entry.get(),
+                    self.register_password_entry.get(),
+                )
+                if self.register_entry.get() and self.register_password_entry.get()
+                else None
+            ),
         )
         self.register_button.pack()
         # self.register_passwords_do_not_match_label = tk.Label(
@@ -679,7 +735,11 @@ class ClientUI:
         self.delete_message_button = tk.Button(
             self.chat_frame,
             text="Delete Message",
-            command=lambda: [self.send_delete_message_request(self.chat_text.curselection()[0] - 1)] if self.chat_text.curselection() else None,
+            command=lambda: (
+                [self.send_delete_message_request(self.chat_text.curselection()[0] - 1)]
+                if self.chat_text.curselection()
+                else None
+            ),
         )
         self.delete_message_button.pack()
 
@@ -693,11 +753,12 @@ class ClientUI:
             command=lambda: [self.send_message_request(self.chat_entry.get())],
         )
         self.send_button.pack()
-        self.settings_button = tk.Button(self.chat_entry_frame, 
-                                         text="Settings",
-                                         command=lambda: [self.destroy_main(), self.setup_settings()])
+        self.settings_button = tk.Button(
+            self.chat_entry_frame,
+            text="Settings",
+            command=lambda: [self.destroy_main(), self.setup_settings()],
+        )
         self.settings_button.pack()
-
 
     def destroy_main(self):
         """
@@ -705,7 +766,7 @@ class ClientUI:
         """
         self.main_frame.destroy()
 
-    def setup_settings(self, failed = False):
+    def setup_settings(self, failed=False):
         """
         Set up the settings screen.
 
@@ -722,7 +783,9 @@ class ClientUI:
         self.connected_to = None
 
         if failed:
-            self.delete_failed_label = tk.Label(self.settings_frame, text="Failed to delete account, password incorrect")
+            self.delete_failed_label = tk.Label(
+                self.settings_frame, text="Failed to delete account, password incorrect"
+            )
             self.delete_failed_label.pack()
 
         self.delete_label = tk.Label(
@@ -740,14 +803,20 @@ class ClientUI:
         self.confirm_password_entry.pack()
 
         self.delete_button = tk.Button(
-            self.settings_frame, 
-            text="Delete", 
-            command=lambda: self.send_delete_request(self.confirm_password_entry.get()) if self.confirm_password_entry.get() else None,
+            self.settings_frame,
+            text="Delete",
+            command=lambda: (
+                self.send_delete_request(self.confirm_password_entry.get())
+                if self.confirm_password_entry.get()
+                else None
+            ),
         )
         self.delete_button.pack()
-        self.cancel_button = tk.Button(self.settings_frame, 
-                                       text="Cancel",
-                                       command=lambda: [self.destroy_settings(), self.setup_main()])
+        self.cancel_button = tk.Button(
+            self.settings_frame,
+            text="Cancel",
+            command=lambda: [self.destroy_settings(), self.setup_main()],
+        )
         self.cancel_button.pack()
 
     def destroy_settings(self):
@@ -763,13 +832,15 @@ class ClientUI:
         self.deleted_frame = tk.Frame(self.root)
         self.deleted_frame.pack()
 
-        self.deleted_label = tk.Label(self.deleted_frame, text="Account successfully deleted.")
+        self.deleted_label = tk.Label(
+            self.deleted_frame, text="Account successfully deleted."
+        )
         self.deleted_label.pack()
 
         self.go_home_button = tk.Button(
             self.deleted_frame,
             text="Go to Home",
-            command=lambda: [self.destroy_deleted(), self.setup_user_entry()]
+            command=lambda: [self.destroy_deleted(), self.setup_user_entry()],
         )
         self.go_home_button.pack()
 
@@ -790,7 +861,6 @@ class ClientUI:
         for message in self.loaded_messages:
             self.chat_text.insert(tk.END, f"{message[0]}: {message[2]}\n")
 
-    
     def rerender_pings(self):
         """
         Rerender the pings in the ping windows.
@@ -801,7 +871,6 @@ class ClientUI:
         for ping in self.incoming_pings:
             self.incoming_pings_listbox.insert(tk.END, f"{ping[0]}: {ping[1]}")
 
-    
     def rerender_users(self):
         """
         Rerender the users in the users listbox.
@@ -810,7 +879,7 @@ class ClientUI:
         self.users_listbox.delete(0, tk.END)
         for user in self.users:
             self.users_listbox.insert(tk.END, user)
-    
+
     def rerender_undelivered(self):
         """
         Rerender the undelivered messages in the undelivered listbox.
@@ -844,5 +913,5 @@ if len(sys.argv) != 3:
 host = sys.argv[1]
 port = int(sys.argv[2])
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     client_ui = ClientUI()

@@ -1,6 +1,7 @@
 import hashlib
 import os
 import sqlite3
+import sys
 import grpc
 from concurrent import futures
 import time
@@ -74,6 +75,9 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
             nonlocal username
             try:
                 for req in request_iterator:
+                    # print size of req in bytes
+                    logging.info(f"Size of request: {sys.getsizeof(req)} bytes")
+
                     if req.action == chat_pb2.CHECK_USERNAME:
                         # check if username is already in use
                         sqlcon = sqlite3.connect(db_path)

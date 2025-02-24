@@ -26,3 +26,30 @@ The same goes for sending requests, just change all send requests to a queue.
 
 Ran into a little issue as proto doesn't allow use of nested lists, had to add extra message class for chat messages. And a format-reformat method
 to server and client to better accomodate this.
+
+Ok, everything is working now!
+
+
+
+QUESTIONS
+
+Does the use of this tool make the application easier or more difficult?
+- Definitely easier. No need to worry about saving selectors or sending bytes, everything is set up
+for you via the generated python files.
+- Bugs are also much easier to track down, since there is really only two main functions: handling requests and handling responses (all the protocol stuff is abstracted away!)
+
+What does it do to the size of the data passed?
+- The size of data is now fixed at 80 bytes
+- It is nice now to have certainty in the size; however, a more low-level optimization can be more efficient on average
+
+How does it change the structure of the client?
+- The client still has the same "send request" functions, but now it is able to make use of a separate thread for listening for responses sent by the server
+- Before, we had to keep the client ui along with the "Bolt" class that was used as data for selectors, but now everything can be done in one file within the UI
+- No need for comm_client that we had before for constructing data types; all is generated for us
+
+The server?
+- The server has a similar structure with a loop over requests and a dictionary to store connected clients
+- For the most part, responses to requests are the same except for the protocol change
+- However, now instead of dealing with multiple selectors, everything is multi-threaded and handled by the stub
+
+How does this change the testing of the application?

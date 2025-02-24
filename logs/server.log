@@ -490,3 +490,74 @@ grpc.RpcError
 grpc.RpcError
 
 2025-02-24 18:38:01 - INFO - asdf disconnected.
+2025-02-24 18:50:30 - INFO - Server started on port 65432
+2025-02-24 18:51:10 - ERROR - Error handling requests at line 217: Traceback (most recent call last):
+  File "/Users/nickydtricky/Desktop/Harvard/Senior Year/Semester 2/CS2620/cs2620_rpc/server.py", line 76, in handle_requests
+    try:
+        
+  File "/Users/nickydtricky/miniforge3/envs/manim-use/lib/python3.11/site-packages/grpc/_server.py", line 543, in __next__
+    return self._next()
+           ^^^^^^^^^^^^
+  File "/Users/nickydtricky/miniforge3/envs/manim-use/lib/python3.11/site-packages/grpc/_server.py", line 535, in _next
+    request = self._look_for_request()
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nickydtricky/miniforge3/envs/manim-use/lib/python3.11/site-packages/grpc/_server.py", line 517, in _look_for_request
+    _raise_rpc_error(self._state)
+  File "/Users/nickydtricky/miniforge3/envs/manim-use/lib/python3.11/site-packages/grpc/_server.py", line 217, in _raise_rpc_error
+    raise rpc_error
+grpc.RpcError
+
+2025-02-24 18:51:10 - INFO - nick disconnected.
+2025-02-24 18:51:15 - INFO - Server started on port 65432
+2025-02-24 18:52:01 - ERROR - Error handling requests at line 217: Traceback (most recent call last):
+  File "/Users/nickydtricky/Desktop/Harvard/Senior Year/Semester 2/CS2620/cs2620_rpc/server.py", line 77, in handle_requests
+    for req in request_iterator:
+  File "/Users/nickydtricky/miniforge3/envs/manim-use/lib/python3.11/site-packages/grpc/_server.py", line 543, in __next__
+    return self._next()
+           ^^^^^^^^^^^^
+  File "/Users/nickydtricky/miniforge3/envs/manim-use/lib/python3.11/site-packages/grpc/_server.py", line 535, in _next
+    request = self._look_for_request()
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nickydtricky/miniforge3/envs/manim-use/lib/python3.11/site-packages/grpc/_server.py", line 517, in _look_for_request
+    _raise_rpc_error(self._state)
+  File "/Users/nickydtricky/miniforge3/envs/manim-use/lib/python3.11/site-packages/grpc/_server.py", line 217, in _raise_rpc_error
+    raise rpc_error
+grpc.RpcError
+
+2025-02-24 18:52:01 - INFO - nick disconnected.
+2025-02-24 18:52:02 - INFO - Server started on port 65432
+2025-02-24 18:52:13 - ERROR - Error handling requests at line 217: Traceback (most recent call last):
+  File "/Users/nickydtricky/Desktop/Harvard/Senior Year/Semester 2/CS2620/cs2620_rpc/server.py", line 77, in handle_requests
+    for req in request_iterator:
+  File "/Users/nickydtricky/miniforge3/envs/manim-use/lib/python3.11/site-packages/grpc/_server.py", line 543, in __next__
+    return self._next()
+           ^^^^^^^^^^^^
+  File "/Users/nickydtricky/miniforge3/envs/manim-use/lib/python3.11/site-packages/grpc/_server.py", line 535, in _next
+    request = self._look_for_request()
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nickydtricky/miniforge3/envs/manim-use/lib/python3.11/site-packages/grpc/_server.py", line 517, in _look_for_request
+    _raise_rpc_error(self._state)
+  File "/Users/nickydtricky/miniforge3/envs/manim-use/lib/python3.11/site-packages/grpc/_server.py", line 217, in _raise_rpc_error
+    raise rpc_error
+grpc.RpcError
+
+2025-02-24 18:52:13 - INFO - nick disconnected.
+2025-02-24 18:52:25 - INFO - Server started on port 65432
+2025-02-24 18:52:29 - INFO - Size of request: 80 bytes
+2025-02-24 18:52:31 - INFO - Size of request: 80 bytes
+2025-02-24 18:54:01 - ERROR - Error handling requests at line 217: Traceback (most recent call last):
+  File "/Users/nickydtricky/Desktop/Harvard/Senior Year/Semester 2/CS2620/cs2620_rpc/server.py", line 77, in handle_requests
+    for req in request_iterator:
+  File "/Users/nickydtricky/miniforge3/envs/manim-use/lib/python3.11/site-packages/grpc/_server.py", line 543, in __next__
+    return self._next()
+           ^^^^^^^^^^^^
+  File "/Users/nickydtricky/miniforge3/envs/manim-use/lib/python3.11/site-packages/grpc/_server.py", line 535, in _next
+    request = self._look_for_request()
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nickydtricky/miniforge3/envs/manim-use/lib/python3.11/site-packages/grpc/_server.py", line 517, in _look_for_request
+    _raise_rpc_error(self._state)
+  File "/Users/nickydtricky/miniforge3/envs/manim-use/lib/python3.11/site-packages/grpc/_server.py", line 217, in _raise_rpc_error
+    raise rpc_error
+grpc.RpcError
+
+2025-02-24 18:54:01 - INFO - nick disconnected.
