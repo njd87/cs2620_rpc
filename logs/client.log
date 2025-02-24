@@ -1,0 +1,155 @@
+2025-02-24 14:47:33 - ERROR - Error reading protocol from config file, exiting
+2025-02-24 14:54:42 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {grpc_message:"Cancelling all calls", grpc_status:14, created_time:"2025-02-24T14:54:42.454911-05:00"}"
+>
+2025-02-24 14:56:52 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {grpc_message:"Cancelling all calls", grpc_status:14, created_time:"2025-02-24T14:56:52.494202-05:00"}"
+>
+2025-02-24 14:59:42 - ERROR - Usage: python client.py <host> <port>
+2025-02-24 14:59:46 - ERROR - Usage: python client.py <host> <port>
+2025-02-24 15:00:31 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {created_time:"2025-02-24T15:00:31.974501-05:00", grpc_status:14, grpc_message:"Cancelling all calls"}"
+>
+2025-02-24 15:22:10 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {created_time:"2025-02-24T15:22:10.9865-05:00", grpc_status:14, grpc_message:"Cancelling all calls"}"
+>
+2025-02-24 15:22:51 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {created_time:"2025-02-24T15:22:51.902111-05:00", grpc_status:14, grpc_message:"Cancelling all calls"}"
+>
+2025-02-24 15:23:20 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {created_time:"2025-02-24T15:23:20.172975-05:00", grpc_status:14, grpc_message:"Cancelling all calls"}"
+>
+2025-02-24 15:23:53 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {created_time:"2025-02-24T15:23:53.320156-05:00", grpc_status:14, grpc_message:"Cancelling all calls"}"
+>
+2025-02-24 15:24:56 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {grpc_message:"Cancelling all calls", grpc_status:14, created_time:"2025-02-24T15:24:56.875822-05:00"}"
+>
+2025-02-24 17:50:36 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {grpc_message:"Cancelling all calls", grpc_status:14, created_time:"2025-02-24T17:50:36.924104-05:00"}"
+>
+2025-02-24 17:50:36 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {created_time:"2025-02-24T17:50:36.924064-05:00", grpc_status:14, grpc_message:"Cancelling all calls"}"
+>
+2025-02-24 18:02:25 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {created_time:"2025-02-24T18:02:25.244958-05:00", grpc_status:14, grpc_message:"Cancelling all calls"}"
+>
+2025-02-24 18:02:25 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {grpc_message:"Cancelling all calls", grpc_status:14, created_time:"2025-02-24T18:02:25.245111-05:00"}"
+>
+2025-02-24 18:06:31 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {created_time:"2025-02-24T18:06:31.323181-05:00", grpc_status:14, grpc_message:"Cancelling all calls"}"
+>
+2025-02-24 18:22:31 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {grpc_message:"Cancelling all calls", grpc_status:14, created_time:"2025-02-24T18:22:31.284197-05:00"}"
+>
+2025-02-24 18:22:49 - INFO - Deleting Message: ('nick', 'nick2', 'afds', 18) from nick2 to nick
+2025-02-24 18:22:49 - INFO - Cannot delete message. Message not from nick2
+2025-02-24 18:22:50 - INFO - Deleting Message: ('nick', 'nick2', 'afds', 18) from nick2 to nick
+2025-02-24 18:22:50 - INFO - Cannot delete message. Message not from nick2
+2025-02-24 18:22:50 - INFO - Deleting Message: ('nick', 'nick2', 'afds', 18) from nick2 to nick
+2025-02-24 18:22:50 - INFO - Cannot delete message. Message not from nick2
+2025-02-24 18:22:51 - INFO - Deleting Message: ('nick', 'nick2', 'afds', 18) from nick2 to nick
+2025-02-24 18:22:51 - INFO - Cannot delete message. Message not from nick2
+2025-02-24 18:22:58 - INFO - Deleting Message: ('nick', 'nick2', 'afds', 18) from nick2 to nick
+2025-02-24 18:22:58 - INFO - Cannot delete message. Message not from nick2
+2025-02-24 18:22:58 - INFO - Deleting Message: ('nick', 'nick2', 'afds', 18) from nick2 to nick
+2025-02-24 18:22:58 - INFO - Cannot delete message. Message not from nick2
+2025-02-24 18:22:59 - INFO - Deleting Message: ('nick', 'nick2', 'afds', 18) from nick2 to nick
+2025-02-24 18:22:59 - INFO - Cannot delete message. Message not from nick2
+2025-02-24 18:22:59 - INFO - Deleting Message: ('nick', 'nick2', 'afdsf', 19) from nick2 to nick
+2025-02-24 18:22:59 - INFO - Cannot delete message. Message not from nick2
+2025-02-24 18:23:00 - INFO - Deleting Message: ('nick', 'nick2', 'afdsf', 19) from nick2 to nick
+2025-02-24 18:23:00 - INFO - Cannot delete message. Message not from nick2
+2025-02-24 18:23:00 - INFO - Deleting Message: ('nick', 'nick2', 'afdsf', 19) from nick2 to nick
+2025-02-24 18:23:00 - INFO - Cannot delete message. Message not from nick2
+2025-02-24 18:23:00 - INFO - Deleting Message: ('nick', 'nick2', 'afdsf', 19) from nick2 to nick
+2025-02-24 18:23:00 - INFO - Cannot delete message. Message not from nick2
+2025-02-24 18:23:42 - INFO - Deleting Message: ('nick', 'nick2', 'afsfsadadfs', 17) from nick2 to nick
+2025-02-24 18:23:42 - INFO - Cannot delete message. Message not from nick2
+2025-02-24 18:23:43 - INFO - Deleting Message: ('nick', 'nick2', 'afsfsadadfs', 17) from nick2 to nick
+2025-02-24 18:23:43 - INFO - Cannot delete message. Message not from nick2
+2025-02-24 18:23:43 - INFO - Deleting Message: ('nick', 'nick2', 'afsfsadadfs', 17) from nick2 to nick
+2025-02-24 18:23:43 - INFO - Cannot delete message. Message not from nick2
+2025-02-24 18:23:44 - INFO - Deleting Message: ('nick', 'nick2', 'afsfsadadfs', 17) from nick2 to nick
+2025-02-24 18:23:44 - INFO - Cannot delete message. Message not from nick2
+2025-02-24 18:24:06 - INFO - Deleting Message: ('nick2', 'nick', 'asdf', 22) from nick2 to nick
+2025-02-24 18:24:37 - INFO - Deleting Message: ('nick', 'nick2', 'afsfsadadfs', 17) from nick to nick2
+2025-02-24 18:24:42 - INFO - Deleting Message: ('nick', 'nick2', 'afdsf', 19) from nick to nick2
+2025-02-24 18:27:51 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {created_time:"2025-02-24T18:27:51.433462-05:00", grpc_status:14, grpc_message:"Cancelling all calls"}"
+>
+2025-02-24 18:28:16 - INFO - Deleting Message: ('nick2', 'nick', 'hello', 1) from nick2 to nick
+2025-02-24 18:28:20 - INFO - Deleting Message: ('nick', 'nick2', 'a', 21) from nick to nick2
+2025-02-24 18:28:24 - INFO - Deleting Account: nick2
+2025-02-24 18:28:32 - INFO - Deleting Account: nick2
+2025-02-24 18:29:20 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {grpc_message:"Cancelling all calls", grpc_status:14, created_time:"2025-02-24T18:29:20.011155-05:00"}"
+>
+2025-02-24 18:29:49 - INFO - Deleting Account: nick2
+2025-02-24 18:30:18 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {created_time:"2025-02-24T18:30:18.032408-05:00", grpc_status:14, grpc_message:"Cancelling all calls"}"
+>
+2025-02-24 18:30:18 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {created_time:"2025-02-24T18:30:18.032414-05:00", grpc_status:14, grpc_message:"Cancelling all calls"}"
+>
+2025-02-24 18:30:46 - INFO - Deleting Account: nick2
+2025-02-24 18:32:12 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {created_time:"2025-02-24T18:32:12.140373-05:00", grpc_status:14, grpc_message:"Cancelling all calls"}"
+>
+2025-02-24 18:32:12 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {grpc_message:"Cancelling all calls", grpc_status:14, created_time:"2025-02-24T18:32:12.139951-05:00"}"
+>
+2025-02-24 18:32:36 - INFO - Deleting Account: nick2
+2025-02-24 18:33:44 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {grpc_message:"Cancelling all calls", grpc_status:14, created_time:"2025-02-24T18:33:44.723715-05:00"}"
+>
+2025-02-24 18:33:44 - ERROR - Error receiving response: <_MultiThreadedRendezvous of RPC that terminated with:
+	status = StatusCode.UNAVAILABLE
+	details = "Cancelling all calls"
+	debug_error_string = "UNKNOWN:Error received from peer ipv4:127.0.0.1:65432 {grpc_message:"Cancelling all calls", grpc_status:14, created_time:"2025-02-24T18:33:44.723725-05:00"}"
+>
+2025-02-24 18:34:56 - INFO - Deleting Account: nick2
+2025-02-24 18:37:55 - INFO - Deleting Account: nick2

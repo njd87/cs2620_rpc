@@ -16,3 +16,13 @@ service as a bidrectional rpc.
 4:34pm: The proto file is now completely set up the way it was in comm_server and comm_client from before. The files have also been generated.
 
 The next step should be to get a client running with a server.
+
+02/24/25
+
+Since we got the server running yesterday, getting the client running was pretty much the same thing. We simply port all the handle responses from the "respond"
+method in comm_client to match grpc proto file.
+
+The same goes for sending requests, just change all send requests to a queue.
+
+Ran into a little issue as proto doesn't allow use of nested lists, had to add extra message class for chat messages. And a format-reformat method
+to server and client to better accomodate this.

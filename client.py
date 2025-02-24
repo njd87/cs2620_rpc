@@ -1,13 +1,15 @@
 import os
+import queue
 import sys
-import socket
-import selectors
-import types
 import threading
 import tkinter as tk
 import json
-from comm_client import Bolt
 import logging
+
+import grpc
+
+import chat_pb2
+import chat_pb2_grpc
 
 # log to a file
 log_file = "logs/client.log"
@@ -25,7 +27,14 @@ if not os.path.exists(log_file):
     with open(log_file, "w") as f:
         pass
 
-sel = selectors.DefaultSelector()
+# A thread-safe queue for outgoing ChatRequests.
+outgoing_queue = queue.Queue()
+
+def request_generator():
+    """Yield ChatRequests from the outgoing_queue."""
+    while True:
+        req = outgoing_queue.get()
+        yield req
 
 class ClientUI:
     """
@@ -47,13 +56,6 @@ class ClientUI:
     The delete screen asks for a username and password to confirm deletion.
 
     The client UI is responsible for sending requests to the server and processing responses.
-
-    Parameters
-    ----------
-    host : str
-        The host to connect to.
-    port : int
-        The port to connect to.
     """
 
     def __init__(self):
@@ -64,11 +66,14 @@ class ClientUI:
         self.root.title("Messenger")
         self.root.geometry("800x600")
 
+        self.channel = grpc.insecure_channel(f'{host}:{port}')
+        self.stub = chat_pb2_grpc.ChatServiceStub(self.channel)
+
         self.credentials = None
 
         # start connection
-        # MUST be run in separate thread
-        threading.Thread(target=event_loop, args=(self,), daemon=True).start()
+        # Start a background thread to process server responses.
+        threading.Thread(target=self.handle_responses, daemon=True).start()
 
         # setup first screen
         self.setup_user_entry()
@@ -93,6 +98,118 @@ class ClientUI:
 
         # run the tkinter main loop
         self.root.mainloop()
+
+    def handle_responses(self):
+        """Continuously receive responses from the server and display them in the text widget."""
+        try:
+            responses = self.stub.Chat(request_generator())
+            for resp in responses:
+                action = resp.action
+                if action == chat_pb2.CHECK_USERNAME:
+                    # destroy current screen
+                    self.destroy_user_entry()
+                    # if the username exists, go to login
+                    # if not, go to register
+                    if not resp.result:
+                        self.setup_login()
+                    else:
+                        self.setup_register()
+                elif action == chat_pb2.LOGIN:
+                    # if login successful, update users and go to undelivered
+                    # if not, go to login with failed
+                    if resp.result:
+                        self.users = list(resp.users)
+                        self.n_undelivered = resp.n_undelivered
+                        self.credentials = self.login_entry.get()
+                        self.login_frame.destroy()
+                        self.setup_undelivered()
+                    else:
+                        self.login_frame.destroy()
+                        self.setup_login(failed=True)
+                elif action == chat_pb2.REGISTER:
+                    # if successful login, update users and go to main
+                    # if not, go to register with failed
+                    if resp.result:
+                        self.users = list(resp.users)
+                        self.credentials = self.register_entry.get()
+                        self.register_frame.destroy()
+                        self.setup_main()
+                    else:
+                        self.register_username_exists_label.pack()
+                elif action == chat_pb2.LOAD_CHAT:
+                    # load the chat for the connected user
+                    # format messages correctly
+                    messages = []
+
+                    for cm in resp.messages:
+                        messages.append((cm.sender, cm.recipient, cm.message, cm.message_id))
+
+                    self.loaded_messages = messages
+                    self.rerender_messages()
+                elif action == chat_pb2.SEND_MESSAGE:
+                    # a message was sent currently to the user
+                    self.loaded_messages.append((
+                        self.credentials,
+                        self.connected_to,
+                        self.chat_entry.get(),
+                        resp.message_id,
+                    ))
+                    self.chat_entry.delete(0, tk.END)
+                    self.rerender_messages()
+                elif action == chat_pb2.VIEW_UNDELIVERED:
+                    # format undelivered messages correctly
+                    messages = []
+
+                    for cm in resp.messages:
+                        messages.append((cm.sender, cm.recipient, cm.message, cm.message_id))
+
+                    self.undelivered_messages = messages
+                    self.rerender_undelivered()
+                elif action == chat_pb2.PING:
+                    if self.connected_to == resp.sender:
+                        # if the message_id already exists in current loaded messages, remove it
+                        if resp.message_id in [m[3] for m in self.loaded_messages]:
+                            self.loaded_messages = [m for m in self.loaded_messages if m[3] != resp.message_id]
+                        else:
+                            self.loaded_messages.append((
+                                self.connected_to,
+                                self.credentials,
+                                resp.sent_message,
+                                resp.message_id,
+                            ))
+                        self.rerender_messages()
+                    else:
+                        self.incoming_pings.append((resp.sender, resp.sent_message))
+                        self.rerender_pings()
+                elif action == chat_pb2.DELETE_MESSAGE:
+                    index = self.chat_text.curselection()[0] - 1
+                    del self.loaded_messages[index]
+                    self.chat_entry.delete(0, tk.END)
+                    self.rerender_messages()
+                elif action == chat_pb2.DELETE_ACCOUNT:
+                    if resp.result:
+                        self.reset_login_vars()
+                        self.destroy_settings()
+                        self.setup_deleted()
+                    else:
+                        self.destroy_settings()
+                        self.setup_settings(failed=True)
+                elif action == chat_pb2.PING_USER:
+                    pinging_user = resp.ping_user
+                    if pinging_user in self.users:
+                        self.users = [user for user in self.users if user != pinging_user]
+                        self.rerender_users()
+                        if self.connected_to == pinging_user:
+                            self.connected_to = None
+                            self.loaded_messages = []
+                            self.rerender_messages()
+                        self.incoming_pings = [ping for ping in self.incoming_pings if ping[0] != pinging_user]
+                        self.rerender_pings()
+                    elif pinging_user != self.credentials:
+                        self.users.append(pinging_user)
+                        self.rerender_users()
+        except grpc.RpcError as e:
+            logging.error(f"Error receiving response: {e}")
 
     def reset_login_vars(self):
         """
@@ -127,14 +244,14 @@ class ClientUI:
         confirm_password : str
             The confirm password to send. Only used for registration.
         """
-        request = {
-            "action": action,
-            "username": username,
-            "passhash": password,
-            "encoding": "utf-8",
-        }
+        # create a request
+        request = chat_pb2.ChatRequest(
+            action=action,
+            username=username,
+            passhash=password,
+        )
 
-        send_request(request)
+        outgoing_queue.put(request)
 
 
     def send_user_check_request(self, username):
@@ -147,12 +264,13 @@ class ClientUI:
             The username to check.
         """
         # create a request
-        request = {
-            "action": "check_username",
-            "username": username,
-            "encoding": "utf-8",
-        }
-        send_request(request)
+
+        request = chat_pb2.ChatRequest(
+            action=chat_pb2.CHECK_USERNAME,
+            username=username,
+        )
+
+        outgoing_queue.put(request)
 
     def send_chat_load_request(self, username):
         """
@@ -165,14 +283,14 @@ class ClientUI:
             The username to load the chat for.
         """
         # create a request
-        request = {
-            "action": "load_chat",
-            "username": self.credentials,
-            "user2": username,
-            "encoding": "utf-8",
-        }
 
-        send_request(request)
+        request = chat_pb2.ChatRequest(
+            action=chat_pb2.LOAD_CHAT,
+            username=self.credentials,
+            user2=username,
+        )
+
+        outgoing_queue.put(request)
 
         self.connected_to = username
         self.incoming_pings = [ping for ping in self.incoming_pings if ping[0] != username] # KG: could cause slowdown
@@ -190,15 +308,15 @@ class ClientUI:
         if not self.connected_to:
             return
         # create a request
-        request = {
-            "action": "send_message",
-            "sender": self.credentials,
-            "recipient": self.connected_to,
-            "message": message,
-            "encoding": "utf-8",
-        }
 
-        send_request(request)
+        request = chat_pb2.ChatRequest(
+            action=chat_pb2.SEND_MESSAGE,
+            sender=self.credentials,
+            recipient=self.connected_to,
+            message=message,
+        )
+
+        outgoing_queue.put(request)
 
         # self.check_send_message_request()
     
@@ -224,14 +342,13 @@ class ClientUI:
             return
         
         # create a request
-        request = {
-            "action": "view_undelivered",
-            "username": self.credentials,
-            "n_messages": n_messages,
-            "encoding": "utf-8",
-        }
+        request = chat_pb2.ChatRequest(
+            action=chat_pb2.VIEW_UNDELIVERED,
+            username=self.credentials,
+            n_messages=n_messages,
+        )
 
-        send_request(request)
+        outgoing_queue.put(request)
 
         # get rid of out of range warning
         self.out_of_range_warning_label.destroy()
@@ -245,15 +362,15 @@ class ClientUI:
         if self.loaded_messages[message_inx][0] == self.credentials:
             message_id = self.loaded_messages[message_inx][3]
 
-            request = {
-                "action": "delete_message",
-                "message_id": message_id,
-                "sender": self.credentials,
-                "recipient": self.connected_to,
-                "encoding": "utf-8"
-            }
+            request = chat_pb2.ChatRequest(
+                action=chat_pb2.DELETE_MESSAGE,
+                message_id=message_id,
+                sender=self.credentials,
+                recipient=self.connected_to,
+            )
 
-            send_request(request)
+            outgoing_queue.put(request)
+
         else:
             logging.info(f"Cannot delete message. Message not from {self.credentials}")
 
@@ -262,14 +379,14 @@ class ClientUI:
         Send a request to delete the account.
         """
         logging.info(f"Deleting Account: {self.credentials}")
-        self.request = {
-            "action": "delete_account",
-            "username": self.credentials,
-            "passhash": password,
-            "encoding": "utf-8"
-        }
 
-        send_request(self.request)
+        request = chat_pb2.ChatRequest(
+            action=chat_pb2.DELETE_ACCOUNT,
+            username=self.credentials,
+            passhash=password,
+        )
+
+        outgoing_queue.put(request)
 
         
 
@@ -337,7 +454,7 @@ class ClientUI:
             self.login_frame,
             text="Login",
             command=lambda: self.send_logreg_request( # KG: design choice for empty strings?
-                "login", self.login_entry.get(), self.login_password_entry.get()
+                chat_pb2.LOGIN, self.login_entry.get(), self.login_password_entry.get()
             ) if self.login_entry.get() and self.login_password_entry.get() else None,
         )
         self.login_button.pack()
@@ -459,7 +576,7 @@ class ClientUI:
             self.register_frame,
             text="Register",
             command=lambda: self.send_logreg_request( # KG: design choice for empty strings?
-                "register", self.register_entry.get(), self.register_password_entry.get()
+                chat_pb2.REGISTER, self.register_entry.get(), self.register_password_entry.get()
             ) if self.register_entry.get() and self.register_password_entry.get() else None,
         )
         self.register_button.pack()
@@ -710,83 +827,6 @@ The rest of the code is for setting up the connection and running the client.
 """
 
 
-# load config file, config/config.json
-if not os.path.exists("config/config.json"):
-    logging.error("Config file does not exist, exiting")
-    sys.exit(1)
-
-# load the config file
-with open("config/config.json", "r") as f:
-    config = json.load(f)
-
-protocol = 'json'
-
-try:
-    protocol = config['client_config']['protocol']
-except KeyError:
-    logging.error("Error reading protocol from config file, exiting")
-    sys.exit(1)
-
-def start_connection(
-    host: str, port: int, gui: ClientUI
-) -> tuple[socket.socket, types.SimpleNamespace]:
-    """
-    Start a connection to the server.
-    Most of this code is from lecture notes.
-
-    Parameters
-    ----------
-    host : str
-        The host to connect to.
-    port : int
-        The port to connect to.
-    gui : ClientUI
-        The client UI to use.
-    """
-
-    # Create a socket and connect to the server.
-    server_addr = (host, port)
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.setblocking(False)
-    try:
-        sock.connect_ex(server_addr)
-    except Exception as e:
-        logging.error(f"Error connecting to server: {e}")
-        sys.exit(1)
-
-    # Register the socket with the selector to send events.
-    events = selectors.EVENT_READ | selectors.EVENT_WRITE
-    data = Bolt(sel=sel, sock=sock, addr=server_addr, protocol_type=protocol, gui=gui)
-    sel.register(sock, events, data=data)
-
-    return sock, data
-
-
-def event_loop(gui: ClientUI):
-    """
-    Event loop for the client.
-    Run in separate thread.
-    """
-    start_connection(host, port, gui)
-    try:
-        while True:
-            events = sel.select(timeout=1)
-            for key, mask in events:
-                if key.data:
-                    key.data.process_events(mask)
-    except KeyboardInterrupt:
-        logging.error("Caught keyboard interrupt, exiting")
-    finally:
-        sel.close()
-
-def send_request(request):
-    """
-    Send a request to the server.
-    """
-    for key in sel.get_map().values():
-        key.data.request = request
-        return
-
 if len(sys.argv) != 3:
     logging.error("Usage: python client.py <host> <port>")
     sys.exit(1)
@@ -794,5 +834,5 @@ if len(sys.argv) != 3:
 host = sys.argv[1]
 port = int(sys.argv[2])
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     client_ui = ClientUI()

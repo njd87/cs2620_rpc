@@ -17,6 +17,15 @@ enum Action {
 
 }
 
+
+message ChatMessage {
+  string sender = 1;
+  string recipient = 2;
+  string message = 3;
+  int32 message_id = 4;
+}
+
+
 message ChatRequest {
   // FOR CLIENT USE
 
@@ -55,7 +64,7 @@ message ChatResponse {
   int32 n_undelivered = 4;
 
   // list of messages
-  repeated string messages = 5;
+  repeated ChatMessage messages = 5;
 
   // used for sending messages and pings
   int32 message_id = 6;

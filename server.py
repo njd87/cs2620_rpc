@@ -12,13 +12,13 @@ import logging
 import chat_pb2
 import chat_pb2_grpc
 import json
+import traceback
 
 log_path = 'logs/server.log'
 db_path = 'data/messenger.db'
 
 # setup logging
-logging.basicConfig(level=logging.INFO)
-if not os.path.exists('logs'):
+if not os.path.exists(log_path):
     with open(log_path, 'w') as f:
         pass
 
@@ -31,7 +31,7 @@ logging.basicConfig(
 
 # import config from config/config.json
 if not os.path.exists('config/config.json'):
-    print("Error: config.json not found")
+    logging.error("config.json not found.")
     exit(1)
 with open('config/config.json') as f:
     config = json.load(f)
@@ -40,7 +40,7 @@ try:
     host = config['server_config']['host']
     port = config['server_config']['port']
 except KeyError as e:
-    print(f"Error: {e} not found in config.json")
+    logging.error(f"KeyError for config: {e}")
     exit(1)
 
 # map of clients to queues for sending responses
@@ -91,12 +91,35 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
                         sqlcon = sqlite3.connect(db_path)
                         sqlcur = sqlcon.cursor()
 
-                        sqlcur.execute("SELECT * FROM users WHERE username=? AND password=?", (req.username, req.password))
+                        req.passhash = hashlib.sha256(req.passhash.encode()).hexdigest()
+
+                        sqlcur.execute("SELECT * FROM users WHERE username=? AND passhash=?", (req.username, req.passhash))
 
                         # if username and password match, send response with success=True
                         # otherwise, send response with success=False
                         if sqlcur.fetchone():
-                            client_queue.put(chat_pb2.ChatResponse(action=chat_pb2.LOGIN, result=True))
+
+                            sqlcur.execute(
+                                "SELECT COUNT(*) FROM messages WHERE recipient=? AND delivered=0",
+                                (req.username,),
+                            )
+
+                            n_undelivered = sqlcur.fetchone()[0]
+
+                            response = chat_pb2.ChatResponse(
+                                action=chat_pb2.LOGIN,
+                                result=True,
+                                users=[s[0] for s in sqlcur.execute(
+                                    "SELECT username FROM users WHERE username != ?", (req.username,)
+                                ).fetchall()],
+                                n_undelivered=n_undelivered,
+                            )
+
+                            client_queue.put(response)
+
+                            # add user to clients
+                            username = req.username
+                            clients[username] = client_queue
                         else:
                             client_queue.put(chat_pb2.ChatResponse(action=chat_pb2.LOGIN, result=False))
                         sqlcon.close()
@@ -111,9 +134,18 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
                             client_queue.put(chat_pb2.ChatResponse(action=chat_pb2.REGISTER, result=False))
                         else:
                             # add new user to database
-                            sqlcur.execute("INSERT INTO users (username, password) VALUES (?, ?)", (req.username, req.password))
+                            req.passhash = hashlib.sha256(req.passhash.encode()).hexdigest()
+                            sqlcur.execute("INSERT INTO users (username, passhash) VALUES (?, ?)", (req.username, req.passhash))
                             sqlcon.commit()
-                            client_queue.put(chat_pb2.ChatResponse(action=chat_pb2.REGISTER, result=True))
+                            response = chat_pb2.ChatResponse(
+                                action=chat_pb2.REGISTER,
+                                result=True,
+                                users=[s[0] for s in sqlcur.execute(
+                                    "SELECT username FROM users WHERE username != ?", (req.username,)
+                                ).fetchall()],
+                            )
+
+                            client_queue.put(response)
 
                         sqlcon.close()
 
@@ -123,7 +155,7 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
 
                         # send ping_user to all clients
                         for user_q in clients.values():
-                            user_q.put(chat_pb2.ChatResponse(action=chat_pb2.PING_USER, username=username))
+                            user_q.put(chat_pb2.ChatResponse(action=chat_pb2.PING_USER, ping_user=username))
 
                         # ping all online users
                     elif req.action == chat_pb2.LOAD_CHAT:
@@ -141,8 +173,14 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
                         except Exception as e:
                             logging.error(f"Error in Load Chat: {e}")
                             result = []
-                        
-                        client_queue.put(chat_pb2.ChatResponse(action=chat_pb2.LOAD_CHAT, messages=result))
+
+                        formatted_messages = []
+
+                        for (sender, recipient, message, message_id) in result:
+                            formatted_messages.append(chat_pb2.ChatMessage(sender=sender, recipient=recipient, message=message
+                            , message_id=message_id))
+
+                        client_queue.put(chat_pb2.ChatResponse(action=chat_pb2.LOAD_CHAT, messages=formatted_messages))
 
                     elif req.action == chat_pb2.SEND_MESSAGE:
                         sender = req.sender
@@ -208,7 +246,14 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
                             (username, n_messages),
                         )
                         result = sqlcur.fetchall()
-                        queue.put(chat_pb2.ChatResponse(action=chat_pb2.VIEW_UNDELIVERED, messages=result))
+
+                        # format messages to ChatMessage
+                        messages_formatted = []
+
+                        for (sender, recipient, message, message_id) in result:
+                            messages_formatted.append(chat_pb2.ChatMessage(sender=sender, recipient=recipient, message=message, message_id=message_id))
+
+                        client_queue.put(chat_pb2.ChatResponse(action=chat_pb2.VIEW_UNDELIVERED, messages=messages_formatted))
 
                         sqlcur.execute(
                             "UPDATE messages SET delivered=1 WHERE recipient=?", (username,)
@@ -225,13 +270,18 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
                         sqlcon.commit()
 
                         sqlcon.close()
-                        queue.put(chat_pb2.ChatResponse(action=chat_pb2.DELETE_MESSAGE, message_id=message_id))
+                        client_queue.put(chat_pb2.ChatResponse(action=chat_pb2.DELETE_MESSAGE, message_id=message_id))
+
+                        # if recipient is online, ping recipient to update chat
+                        if req.recipient in clients:
+                            clients[req.recipient].put(chat_pb2.ChatResponse(action=chat_pb2.PING, sender=req.sender, sent_message=req.message, message_id=message_id))
+
                     elif req.action == chat_pb2.DELETE_ACCOUNT:
                         sqlcon = sqlite3.connect(db_path)
                         sqlcur = sqlcon.cursor()
 
                         username = req.username
-                        passhash = req.password
+                        passhash = req.passhash
 
 
                         passhash = hashlib.sha256(passhash.encode()).hexdigest()
@@ -247,6 +297,14 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
 
                                 client_queue.put(chat_pb2.ChatResponse(action=chat_pb2.DELETE_ACCOUNT, result=True))
                                 # tell server to ping users to update their chat, remove from connected users
+
+                                # delete user from clients
+                                if username in clients:
+                                    del clients[username]
+
+                                for user_q in clients.values():
+                                    user_q.put(chat_pb2.ChatResponse(action=chat_pb2.PING_USER, ping_user=username))
+
                             # username exists but passhash is wrong
                             else:
                                 client_queue.put(chat_pb2.ChatResponse(action=chat_pb2.DELETE_ACCOUNT, result=False))
@@ -263,11 +321,13 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
                     else:
                         logging.error(f"Invalid action: {req.action}")
             except Exception as e:
-                print("Error handling requests:", e)
+                tb = traceback.extract_tb(e.__traceback__)
+                line_number = tb[-1].lineno if tb else "unknown"
+                logging.error(f"Error handling requests at line {line_number}: {traceback.format_exc()}")
             finally:
                 if username in clients:
                     del clients[username]
-                    print(f"{username} disconnected.")
+                    logging.info(f"{username} disconnected.")
 
         # Run request handling in a separate thread.
         threading.Thread(target=handle_requests, daemon=True).start()
@@ -289,7 +349,7 @@ def serve():
     chat_pb2_grpc.add_ChatServiceServicer_to_server(ChatServiceServicer(), server)
     server.add_insecure_port(f"{host}:{port}")
     server.start()
-    print(f"Server started on {host}:{port}")
+    logging.info(f"Server started on port {port}")
     try:
         while True:
             time.sleep(86400)
