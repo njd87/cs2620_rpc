@@ -53,3 +53,9 @@ The server?
 - However, now instead of dealing with multiple selectors, everything is multi-threaded and handled by the stub
 
 How does this change the testing of the application?
+- Testing now no longer requires testing encoding and decoding of protocols, since that is all done for us
+- Most of testing (aside from database tests, which remain the same) involve making sure that the correct chat_pb2 requests and responses are expected
+for the same operations
+- In addition, functions are called automatically in a thread by the service object, so there is no manual calling
+- Thus, testing must be done on a case-by-case basis via a "test_server" file
+- This is all done in the test suite
